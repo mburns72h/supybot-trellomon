@@ -36,6 +36,7 @@ import supybot.ircutils as ircutils
 import supybot.ircmsgs as ircmsgs
 import supybot.callbacks as callbacks
 import supybot.conf as conf
+import supybot.schedule as schedule
 import supybot.registry as registry
 from trello import TrelloApi
 import sys
@@ -57,20 +58,22 @@ class TrelloMon(callbacks.Plugin):
         self.__parent.__init__(irc)
         self.trello = None
         self.reload_trello()
-        self.last_run = []
-        if self.trello is not None:
-            self.running = True
-        else:
-            self.running = False
+        self.last_run = {}
         for name in self.registryValue('lists'):
             self.register_list(name)
+        schedule.addPeriodicEvent(self.check_trello(irc), 30,
+                    name=self.name(), now=False)
         reload(sys)
+
+    def die(self):
+        self.__parent.die()
+        schedule.removeEvent(self.name())
 
     def debug(self, msg):
         if self.registryValue('debug'):
-            print "DEBUG:  msg"
+            print "DEBUG:  " + time.ctime() + ":  " + str(msg)
 
-    def _send(self, msg, channel, irc):
+    def _send(self, message, channel, irc):
         '''send message to irc'''
         msg = ircmsgs.privmsg(channel, message)
         irc.queueMsg(msg)
@@ -89,28 +92,16 @@ class TrelloMon(callbacks.Plugin):
             irc.replyFailure()
     reloadtrello = wrap(reload, [])
 
-    def isrunning(self, irc, msg, args):
-        ''' show status of bot'''
-        irc.reply(self.running)
-    isrunning = wrap(isrunning, [])
-
-    def run(self, irc, msg, args):
-        ''' start the bot -- may take up to a minute to start getting results
-        '''
-        if self.trello is not None:
-            self.running = True
-            irc.replySuccess()
-        else:
-            self.running = false
-            self.reply("""Trello API and token not correctly configured or trello
-            unavailable""")
-    run = wrap(run, [])
-
     def kill(self, irc, msg, args):
         ''' kill auto-updates'''
-        self.running = False
-        irc.replySuccess()
-    kill = wrap(kill, [])
+        self.die()
+    killagent = wrap(kill, ['admin'])
+
+    def startagent(self, irc, msg, args):
+        '''start the monitoring agent'''
+        schedule.addPeriodicEvent(self.check_trello(irc), 20,
+                    name=self.name(), now=True)
+    startagent = wrap (startagent, ['admin'])
 
     def apikey(self, irc, msg, args):
         '''print apikey'''
@@ -120,6 +111,9 @@ class TrelloMon(callbacks.Plugin):
     def register_list(self, name, trelloid=""):
         install = conf.registerGroup(conf.supybot.plugins.TrelloMon.lists,
         name.lower())
+
+        conf.registerChannelValue(install, "AlertMessage",
+            registry.String("", """Prefix for all alerts for this trello list"""))
 
         conf.registerGlobalValue(install, "list_id",
             registry.String(trelloid, """the trello id for the list being monitored"""))
@@ -154,9 +148,9 @@ class TrelloMon(callbacks.Plugin):
     addlist = wrap(addlist, ['admin',
     'somethingwithoutspaces','somethingwithoutspaces'])
 
-    def get_trello_cards(self, list=CRITICAL_LIST_ID, label=None):
+    def get_trello_cards(self, list=None, label=None):
         result=[]
-        if list is Null or list == "":
+        if list is None or list == "":
             return result
         for card in self.trello.lists.get_card(list):
             if label is None:
@@ -167,52 +161,55 @@ class TrelloMon(callbacks.Plugin):
                         result.append(card['name'])
         return result
 
-    def execute(self, irc, msgs, args):
-        '''execute'''
-        #while self.running:
-        for j in [1]:
-            #for each irc network in the bot
-            for i in world.ircs:
-                debug(i)
-                #for each channel the bot is in
-                for chan in i.state.channels:
-                    debug(chan)
-                    #for each list in the definition
-                    for entry in self.registryValue('lists'):
-                        debug(entry)
-                        #if not active in that channel (default is false), then
-                        # do nothing
-                        if not self.registryValue(lists+"."+entry+".active."+chan):
-                            debug("not active in chan: " + chan)
-                            continue
-                        #if no last_run time set, then set it
-                        if lists+"_"+chan not in self.lastrun:
-                            debug("no last run")
-                            self.last_run[entry+"_"+chan] = time.mktime(time.gmtime())
-                        #compare last run time to current time to interval
-                        # if less than interval, next
-                        elif (float(time.mktime(time.gmtime()) - self.last_run[entry+"_"+chan]) <
-                            float(self.registryValue(lists+"."+entry+".interval."+chan)
-                            * 60)):
-                            debug("last run too recent")
-                            continue
-                        #if greater than interval, update
-                        debug("last run too old or no last run")
-                        results = self.get_trello_cards(entry)
-                        if results == []:
-                            debug("no results")
-                            continue
-                        # check verbose setting per channel -- defaults to false
-                        message = self.registryValue(lists+"."+entry+"alertMessage")
-                        if self.registryValue(lists+"."+entry+".verbose"):
-                            for card in results:
-                                self._send(message + card, chan, irc)
-                        else:
-                            self._send(message + len(results) + " card(s) in "
-                                + list, chan, irc)
-                        # TODO add label logic
-            time.sleep(30)
-    execute = wrap(execute, [])
+    def check_trello(self, irc):
+        '''based on plugin config, scan trello for cards in the specified lists'''
+        #for each irc network in the bot
+        for i in world.ircs:
+            self.debug(i)
+            #for each channel the bot is in
+            for chan in i.state.channels:
+                self.debug(chan)
+                #for each list in the definition
+                for entry in self.registryValue('lists'):
+                    self.debug(entry)
+                    #if not active in that channel (default is false), then
+                    # do nothing
+                    path = 'lists.' + entry + "."
+                    if not self.registryValue("lists."+entry+".active."+chan):
+                        self.debug("not active in chan: " + chan)
+                        continue
+                    #if no last_run time set, then set it
+                    if entry+"_"+chan not in self.last_run:
+                        self.debug("no last run")
+                        self.last_run[entry+"_"+chan] = time.mktime(time.gmtime())
+                    #compare last run time to current time to interval
+                    # if less than interval, next
+                    elif (float(time.mktime(time.gmtime()) - self.last_run[entry+"_"+chan]) <
+                        float(self.registryValue("lists."+entry+".interval."+chan)
+                        * 60)):
+                        self.debug("last run too recent")
+                        continue
+                    #if greater than interval, update
+                    self.debug("last run too old or no last run")
+                    results = self.get_trello_cards(self.registryValue('lists.'+entry+'.list_id'))
+                    if results == []:
+                        self.debug("no results")
+                        continue
+                    # check verbose setting per channel -- defaults to false
+                    # TODO add label logic
+                    message = self.registryValue("lists."+entry+".AlertMessage")
+                    if self.registryValue("lists."+entry+".verbose."+chan):
+                        self.debug("verbose")
+                        for card in results:
+                            self._send(message + card, chan, irc)
+                    else:
+                        self.debug("not verbose")
+                        self._send(message + str(len(results)) + " card(s) in " + entry, chan, irc)
+
+    def execute_wrapper(self, irc, msgs, args):
+        '''admin test script for the monitor command'''
+        self.check_trello(irc)
+    execute = wrap(execute_wrapper, ['admin'])
 
     def test(self, irc, msgs, args):
         '''test'''
