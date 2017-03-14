@@ -61,17 +61,21 @@ class TrelloMon(callbacks.Plugin):
         self.last_run = {}
         for name in self.registryValue('lists'):
             self.register_list(name)
-        schedule.addPeriodicEvent(self.check_trello(irc), 30,
+        try:
+            schedule.addPeriodicEvent(self.check_trello, 30,
                     name=self.name(), now=False)
+        except:
+            pass
         reload(sys)
-
-    def die(self):
-        self.__parent.die()
-        schedule.removeEvent(self.name())
 
     def debug(self, msg):
         if self.registryValue('debug'):
             print "DEBUG:  " + time.ctime() + ":  " + str(msg)
+
+    def die(self):
+        self.debug(self.name())
+        self.__parent.die()
+        schedule.removeEvent(self.name())
 
     def _send(self, message, channel, irc):
         '''send message to irc'''
@@ -99,7 +103,12 @@ class TrelloMon(callbacks.Plugin):
 
     def startagent(self, irc, msg, args):
         '''start the monitoring agent'''
-        schedule.addPeriodicEvent(self.check_trello(irc), 20,
+        self.debug(self.name())
+        try:
+            self.die()
+        except:
+            pass
+        schedule.addPeriodicEvent(self.check_trello, 20,
                     name=self.name(), now=True)
     startagent = wrap (startagent, ['admin'])
 
@@ -161,13 +170,12 @@ class TrelloMon(callbacks.Plugin):
                         result.append(card['name'])
         return result
 
-    def check_trello(self, irc):
+    def check_trello(self):
         '''based on plugin config, scan trello for cards in the specified lists'''
         #for each irc network in the bot
-        for i in world.ircs:
-            self.debug(i)
+        for irc in world.ircs:
             #for each channel the bot is in
-            for chan in i.state.channels:
+            for chan in irc.state.channels:
                 self.debug(chan)
                 #for each list in the definition
                 for entry in self.registryValue('lists'):
@@ -191,6 +199,7 @@ class TrelloMon(callbacks.Plugin):
                         continue
                     #if greater than interval, update
                     self.debug("last run too old or no last run")
+                    self.last_run[entry+"_"+chan] = time.mktime(time.gmtime())
                     results = self.get_trello_cards(self.registryValue('lists.'+entry+'.list_id'))
                     if results == []:
                         self.debug("no results")
@@ -204,7 +213,7 @@ class TrelloMon(callbacks.Plugin):
                             self._send(message + card, chan, irc)
                     else:
                         self.debug("not verbose")
-                        self._send(message + str(len(results)) + " card(s) in " + entry, chan, irc)
+                        self._send(message + str(len(results)) + ' cards in ' + entry + ' -- ' + self.registryValue('lists.'+entry+'.url'), chan, irc)
 
     def execute_wrapper(self, irc, msgs, args):
         '''admin test script for the monitor command'''
