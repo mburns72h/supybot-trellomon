@@ -163,11 +163,11 @@ class TrelloMon(callbacks.Plugin):
             return result
         for card in self.trello.lists.get_card(list):
             if label is None:
-                result.append(card['name'])
+                result.append([card['name'],card['shortLink']])
             else:
                 for card_label in card['labels']:
                     if label == card_label['name']:
-                        result.append(card['name'])
+                        result.append([card['name'], card['shortLink']])
         return result
 
     def check_trello(self):
@@ -210,14 +210,14 @@ class TrelloMon(callbacks.Plugin):
                     if self.registryValue("lists."+entry+".verbose."+chan):
                         self.debug("verbose")
                         for card in results:
-                            self._send(message + card, chan, irc)
+                            self._send(message + card[0] + " -- https://trello.com/c/" + card[1], chan, irc)
                     else:
                         self.debug("not verbose")
                         self._send(message + str(len(results)) + ' cards in ' + entry + ' -- ' + self.registryValue('lists.'+entry+'.url'), chan, irc)
 
     def execute_wrapper(self, irc, msgs, args):
         '''admin test script for the monitor command'''
-        self.check_trello(irc)
+        self.check_trello()
     execute = wrap(execute_wrapper, ['admin'])
 
     def test(self, irc, msgs, args):
