@@ -206,14 +206,14 @@ class TrelloMon(callbacks.Plugin):
                         continue
                     # check verbose setting per channel -- defaults to false
                     # TODO add label logic
-                    message = self.registryValue("lists."+entry+".AlertMessage")
+                    message = self.registryValue("lists."+entry+".AlertMessage."+chan)
                     if self.registryValue("lists."+entry+".verbose."+chan):
                         self.debug("verbose")
                         for card in results:
-                            self._send(message + card[0] + " -- https://trello.com/c/" + card[1], chan, irc)
+                            self._send(message + " " + card[0] + " -- https://trello.com/c/" + card[1], chan, irc)
                     else:
                         self.debug("not verbose")
-                        self._send(message + str(len(results)) + ' cards in ' + entry + ' -- ' + self.registryValue('lists.'+entry+'.url'), chan, irc)
+                        self._send(message + " " + str(len(results)) + ' cards in ' + entry + ' -- ' + self.registryValue('lists.'+entry+'.url'), chan, irc)
 
     def execute_wrapper(self, irc, msgs, args):
         '''admin test script for the monitor command'''
