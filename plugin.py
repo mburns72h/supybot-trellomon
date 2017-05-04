@@ -201,12 +201,16 @@ class TrelloMon(callbacks.Plugin):
                     self.debug("last run too old or no last run")
                     self.last_run[entry+"_"+chan] = time.mktime(time.gmtime())
                     results = self.get_trello_cards(self.registryValue('lists.'+entry+'.list_id'))
+                    message = self.registryValue("lists."+entry+".AlertMessage."+chan)
                     if results == []:
+                        if self.last_run[entry+"_"+chan+"_count"] != 0:
+                            self._send(message + " ALL CLEAR!!!", chan, irc)
+                        self.last_run[entry+"_"+chan+"_count"] = 0
                         self.debug("no results")
                         continue
                     # check verbose setting per channel -- defaults to false
                     # TODO add label logic
-                    message = self.registryValue("lists."+entry+".AlertMessage."+chan)
+                    self.last_run[entry+"_"+chan+"_count"] = len(results)
                     if self.registryValue("lists."+entry+".verbose."+chan):
                         self.debug("verbose")
                         for card in results:
