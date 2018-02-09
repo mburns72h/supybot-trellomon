@@ -189,12 +189,10 @@ class TrelloMon(callbacks.Plugin):
         for dfg in self.DFG:
             if dfg['id'] == literal_eval(r.json()[0]['value'])['fields'][self.DFG_id]:
                 card_DFG = dfg['value']
-                print "card_DFG is " + card_DFG
                 break
         for rca in self.RCA:
             if rca['id'] == literal_eval(r.json()[0]['value'])['fields'][self.RCA_id]:
                 card_RCA = rca['value']
-                print "card_RCA is " + card_RCA
                 break
         return [card_DFG, card_RCA]
 
