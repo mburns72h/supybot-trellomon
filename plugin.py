@@ -76,8 +76,7 @@ class TrelloMon(callbacks.Plugin):
         reload(sys)
 
     def debug(self, msg):
-        if self.registryValue('debug'):
-            print "DEBUG:  " + time.ctime() + ":  " + str(msg)
+        self.log.debug(str(msg))
 
     def die(self):
         self.debug(self.name())
@@ -155,7 +154,7 @@ class TrelloMon(callbacks.Plugin):
     def get_custom_field_details(self, listid):
         '''get the custom field details'''
         # get url from the list
-        self.debug(listid)
+        self.debug("listid is " + str(listid))
         baseurl = "https://api.trello.com/1/boards/"
         # hard coded to get organizational plugin data
         querystring = {'lists': 'open', 'actions': 'all', 'members': 'none', 'card_pluginData': 'false', 'membersInvited': 'none', 'fields': 'name, desc, descData, closed, idOrganization, pinned, url, shortUrl, prefs, labelNames', 'organization_pluginData': 'true', 'memberships': 'none', 'pluginData': 'true', 'boardStars': 'none', 'cards': 'none', 'checklists': 'none', 'membersInvited_fields': 'all'}
@@ -163,20 +162,24 @@ class TrelloMon(callbacks.Plugin):
                      'token': self.registryValue('trelloToken')}
         options = querystring
         options.update(auth_opts)
-        self.debug(options)
+        self.debug("Auth Options passed:  " + str(options))
         boardid = self.trello.lists.get(listid, fields='idBoard')['idBoard']
-        self.debug(boardid)
+        self.debug("found this board id:  " + str(boardid))
         r = requests.get(baseurl + boardid, params=options)
-        self.debug(r.status_code)
+        self.debug("status code returned:  " + str(r.status_code))
         # FIXME -- add logic to determine the right plugin entry
         plugin_data = literal_eval(r.json()['pluginData'][0]['value'])['fields']
         for field in plugin_data:
             if field['n'] == 'DFG':
                 self.DFG = field['o']
+                self.debug("DFG mapping:  " + str(self.DFG))
                 self.DFG_id = field['id']
+                self.debug("DFG field id:  " + self.DFG_id)
             elif field['n'] == 'RCA':
                 self.RCA = field['o']
+                self.debug("RCA mapping:  " + str(self.RCA))
                 self.RCA_id = field['id']
+                self.debug("RCA field id:  " + self.RCA_id)
 
     def get_card_custom_fields(self, card):
         baseurl = 'https://api.trello.com/1/cards/'
@@ -186,14 +189,21 @@ class TrelloMon(callbacks.Plugin):
         # FIXME -- add logic for multiple plugins
         card_DFG = None
         card_RCA = None
+        info = literal_eval(r.json()[0]['value'])['fields']
         for dfg in self.DFG:
-            if dfg['id'] == literal_eval(r.json()[0]['value'])['fields'][self.DFG_id]:
+            if self.DFG_id not in info:
+                break
+            elif dfg['id'] == info[self.DFG_id]:
                 card_DFG = dfg['value']
                 break
         for rca in self.RCA:
-            if rca['id'] == literal_eval(r.json()[0]['value'])['fields'][self.RCA_id]:
+            if self.RCA_id not in info:
+                break
+            elif rca['id'] == info[self.RCA_id]:
                 card_RCA = rca['value']
                 break
+        self.debug("Card DFG:  " + str(card_DFG))
+        self.debug("Card RCA:  " + str(card_RCA))
         return [card_DFG, card_RCA]
 
     def addlist(self, irc, msg, args, name, trelloid):
