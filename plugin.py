@@ -38,6 +38,8 @@ import supybot.callbacks as callbacks
 import supybot.conf as conf
 import supybot.schedule as schedule
 import supybot.registry as registry
+import requests
+from ast import literal_eval
 from trello import TrelloApi
 import sys
 import time
@@ -49,6 +51,7 @@ except ImportError:
     # without the i18n module
     _ = lambda x: x
 
+
 class TrelloMon(callbacks.Plugin):
     """Trello List Monitor bot"""
     threaded = True
@@ -59,11 +62,15 @@ class TrelloMon(callbacks.Plugin):
         self.trello = None
         self.reload_trello()
         self.last_run = {}
+        self.DFG_id = None
+        self.RCA_id = None
+        self.DFG = []
+        self.RCA = []
         for name in self.registryValue('lists'):
             self.register_list(name)
         try:
             schedule.addPeriodicEvent(self.check_trello, 30,
-                    name=self.name(), now=False)
+                                      name=self.name(), now=False)
         except:
             pass
         reload(sys)
@@ -92,7 +99,7 @@ class TrelloMon(callbacks.Plugin):
         self.reload_trello()
         if self.trello is not None:
             irc.replySuccess()
-        else :
+        else:
             irc.replyFailure()
     reloadtrello = wrap(reload, [])
 
@@ -109,8 +116,8 @@ class TrelloMon(callbacks.Plugin):
         except:
             pass
         schedule.addPeriodicEvent(self.check_trello, 20,
-                    name=self.name(), now=True)
-    startagent = wrap (startagent, ['admin'])
+                                  name=self.name(), now=True)
+    startagent = wrap(startagent, ['admin'])
 
     def apikey(self, irc, msg, args):
         '''print apikey'''
@@ -119,32 +126,77 @@ class TrelloMon(callbacks.Plugin):
 
     def register_list(self, name, trelloid=""):
         install = conf.registerGroup(conf.supybot.plugins.TrelloMon.lists,
-        name.lower())
+                                     name.lower())
 
         conf.registerChannelValue(install, "AlertMessage",
-            registry.String("", """Prefix for all alerts for this trello list"""))
+                                  registry.String("", """Prefix for all alerts for this trello list"""))
 
         conf.registerGlobalValue(install, "list_id",
-            registry.String(trelloid, """the trello id for the list being monitored"""))
+                                 registry.String(trelloid, """the trello id for the list being monitored"""))
 
         conf.registerChannelValue(install, "interval",
-            registry.PositiveInteger(10, """The cadence for polling the board"""))
+                                  registry.PositiveInteger(10, """The cadence for polling the board"""))
 
         conf.registerChannelValue(install, "verbose", registry.Boolean(True,
-            """Should this list report a summary or all cards"""))
+                                  """Should this list report a summary or all cards"""))
 
         conf.registerChannelValue(install, "active", registry.Boolean(False,
-            """Should this list be reported on this channel"""))
+                                  """Should this list be reported on this channel"""))
 
         conf.registerGlobalValue(install, "url",
-            registry.String("https://trello.com", """link quick hash to the board containing
-            this list"""))
+                                 registry.String("https://trello.com", """link quick hash to the board containing
+                                 this list"""))
         if trelloid == "":
             trelloid = self.registryValue("lists."+name+".list_id")
         if self.trello is not None:
-            url="https://trello.com/b/" + self.trello.lists.get_board(trelloid)['shortLink']
+            url = "https://trello.com/b/" + self.trello.lists.get_board(trelloid)['shortLink']
             self.setRegistryValue("lists."+name+".url", url)
 
+    def get_custom_field_details(self, listid):
+        '''get the custom field details'''
+        # get url from the list
+        self.debug(listid)
+        baseurl = "https://api.trello.com/1/boards/"
+        # hard coded to get organizational plugin data
+        querystring = {'lists': 'open', 'actions': 'all', 'members': 'none', 'card_pluginData': 'false', 'membersInvited': 'none', 'fields': 'name, desc, descData, closed, idOrganization, pinned, url, shortUrl, prefs, labelNames', 'organization_pluginData': 'true', 'memberships': 'none', 'pluginData': 'true', 'boardStars': 'none', 'cards': 'none', 'checklists': 'none', 'membersInvited_fields': 'all'}
+        auth_opts = {'key': self.registryValue('trelloApi'),
+                     'token': self.registryValue('trelloToken')}
+        options = querystring
+        options.update(auth_opts)
+        self.debug(options)
+        boardid = self.trello.lists.get(listid, fields='idBoard')['idBoard']
+        self.debug(boardid)
+        r = requests.get(baseurl + boardid, params=options)
+        self.debug(r.status_code)
+        # FIXME -- add logic to determine the right plugin entry
+        plugin_data = literal_eval(r.json()['pluginData'][0]['value'])['fields']
+        for field in plugin_data:
+            if field['n'] == 'DFG':
+                self.DFG = field['o']
+                self.DFG_id = field['id']
+            elif field['n'] == 'RCA':
+                self.RCA = field['o']
+                self.RCA_id = field['id']
+
+    def get_card_custom_fields(self, card):
+        baseurl = 'https://api.trello.com/1/cards/'
+        auth_opts = {'key': self.registryValue('trelloApi'),
+                     'token': self.registryValue('trelloToken')}
+        r = requests.get(baseurl + card + '/pluginData', params=auth_opts)
+        # FIXME -- add logic for multiple plugins
+        card_DFG = None
+        card_RCA = None
+        for dfg in self.DFG:
+            if dfg['id'] == literal_eval(r.json()[0]['value'])['fields'][self.DFG_id]:
+                card_DFG = dfg['value']
+                print "card_DFG is " + card_DFG
+                break
+        for rca in self.RCA:
+            if rca['id'] == literal_eval(r.json()[0]['value'])['fields'][self.RCA_id]:
+                card_RCA = rca['value']
+                print "card_RCA is " + card_RCA
+                break
+        return [card_DFG, card_RCA]
 
     def addlist(self, irc, msg, args, name, trelloid):
         '''<name> <trello_id>
@@ -152,18 +204,19 @@ class TrelloMon(callbacks.Plugin):
         self.register_list(name, trelloid)
         lists = self.registryValue('lists')
         lists.append(name.lower())
-        self.setRegistryValue('lists',lists)
+        self.setRegistryValue('lists', lists)
         irc.replySuccess()
     addlist = wrap(addlist, ['admin',
-    'somethingwithoutspaces','somethingwithoutspaces'])
+                             'somethingwithoutspaces',
+                             'somethingwithoutspaces'])
 
     def get_trello_cards(self, list=None, label=None):
-        result=[]
+        result = []
         if list is None or list == "":
             return result
         for card in self.trello.lists.get_card(list):
             if label is None:
-                result.append([card['name'],card['shortLink']])
+                result.append([card['name'], card['shortLink']])
             else:
                 for card_label in card['labels']:
                     if label == card_label['name']:
@@ -172,32 +225,32 @@ class TrelloMon(callbacks.Plugin):
 
     def check_trello(self):
         '''based on plugin config, scan trello for cards in the specified lists'''
-        #for each irc network in the bot
+        # for each irc network in the bot
         for irc in world.ircs:
-            #for each channel the bot is in
+            # for each channel the bot is in
             for chan in irc.state.channels:
                 self.debug(chan)
-                #for each list in the definition
+                # for each list in the definition
                 for entry in self.registryValue('lists'):
                     self.debug(entry)
-                    #if not active in that channel (default is false), then
+                    # if not active in that channel (default is false), then
                     # do nothing
                     path = 'lists.' + entry + "."
+                    self.get_custom_field_details(self.registryValue('lists.' + entry +'.list_id'))
                     if not self.registryValue("lists."+entry+".active."+chan):
                         self.debug("not active in chan: " + chan)
                         continue
-                    #if no last_run time set, then set it
+                    # if no last_run time set, then set it
                     if entry+"_"+chan not in self.last_run:
                         self.debug("no last run")
                         self.last_run[entry+"_"+chan] = time.mktime(time.gmtime())
-                    #compare last run time to current time to interval
+                    # compare last run time to current time to interval
                     # if less than interval, next
                     elif (float(time.mktime(time.gmtime()) - self.last_run[entry+"_"+chan]) <
-                        float(self.registryValue("lists."+entry+".interval."+chan)
-                        * 60)):
+                          float(self.registryValue("lists."+entry+".interval."+chan) * 60)):
                         self.debug("last run too recent")
                         continue
-                    #if greater than interval, update
+                    # if greater than interval, update
                     self.debug("last run too old or no last run")
                     self.last_run[entry+"_"+chan] = time.mktime(time.gmtime())
                     results = self.get_trello_cards(self.registryValue('lists.'+entry+'.list_id'))
@@ -214,7 +267,18 @@ class TrelloMon(callbacks.Plugin):
                     if self.registryValue("lists."+entry+".verbose."+chan):
                         self.debug("verbose")
                         for card in results:
-                            self._send(message + " " + card[0] + " -- https://trello.com/c/" + card[1], chan, irc)
+                            custom = self.get_card_custom_fields(card[1])
+                            if custom[0] is None:
+                                dfgmsg = "<DFG:Unset>"
+                            else:
+                                dfgmsg = "<DFG:" + custom[0] + ">"
+                            if custom[1] is None:
+                                rcamsg = "RCA:Unset"
+                            else:
+                                rcamsg = "RCA: " + custom[1]
+                            self._send(message + " " + dfgmsg + " " + card[0] +
+                                       " -- https://trello.com/c/" +
+                                       card[1] + " " + rcamsg, chan, irc)
                     else:
                         self.debug("not verbose")
                         self._send(message + " " + str(len(results)) + ' cards in ' + entry + ' -- ' + self.registryValue('lists.'+entry+'.url'), chan, irc)
