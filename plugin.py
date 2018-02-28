@@ -29,8 +29,7 @@
 ###
 
 import supybot.utils as utils
-# from supybot.commands import *
-from supybot.commands import wrap
+from supybot.commands import *
 import supybot.plugins as plugins
 import supybot.world as world
 import supybot.ircutils as ircutils
@@ -247,36 +246,35 @@ class TrelloMon(callbacks.Plugin):
                     self.debug(entry)
                     # if not active in that channel (default is false), then
                     # do nothing
-                    path = 'lists.' + entry + "."
-                    self.get_custom_field_details(self.registryValue('lists.' + entry +'.list_id'))
-                    if not self.registryValue("lists."+entry+".active."+chan):
+                    self.get_custom_field_details(self.registryValue('lists.' + entry + '.list_id'))
+                    if not self.registryValue("lists." + entry + ".active." + chan):
                         self.debug("not active in chan: " + chan)
                         continue
                     # if no last_run time set, then set it
-                    if entry+"_"+chan not in self.last_run:
+                    if entry + "_" + chan not in self.last_run:
                         self.debug("no last run")
-                        self.last_run[entry+"_"+chan] = time.mktime(time.gmtime())
+                        self.last_run[entry + "_" + chan] = time.mktime(time.gmtime())
                     # compare last run time to current time to interval
                     # if less than interval, next
-                    elif (float(time.mktime(time.gmtime()) - self.last_run[entry+"_"+chan]) <
-                          float(self.registryValue("lists."+entry+".interval."+chan) * 60)):
+                    elif (float(time.mktime(time.gmtime()) - self.last_run[entry + "_" + chan]) <
+                          float(self.registryValue("lists." + entry + ".interval." + chan) * 60)):
                         self.debug("last run too recent")
                         continue
                     # if greater than interval, update
                     self.debug("last run too old or no last run")
-                    self.last_run[entry+"_"+chan] = time.mktime(time.gmtime())
-                    results = self.get_trello_cards(self.registryValue('lists.'+entry+'.list_id'))
-                    message = self.registryValue("lists."+entry+".AlertMessage."+chan)
+                    self.last_run[entry + "_" + chan] = time.mktime(time.gmtime())
+                    results = self.get_trello_cards(self.registryValue('lists.' + entry + '.list_id'))
+                    message = self.registryValue("lists." + entry + ".AlertMessage." + chan)
                     if results == []:
-                        if self.last_run[entry+"_"+chan+"_count"] != 0:
+                        if self.last_run[entry + "_" + chan + "_count"] != 0:
                             self._send(message + " ALL CLEAR!!!", chan, irc)
-                        self.last_run[entry+"_"+chan+"_count"] = 0
+                        self.last_run[entry + "_" + chan + "_count"] = 0
                         self.debug("no results")
                         continue
                     # check verbose setting per channel -- defaults to false
                     # TODO add label logic
-                    self.last_run[entry+"_"+chan+"_count"] = len(results)
-                    if self.registryValue("lists."+entry+".verbose."+chan):
+                    self.last_run[entry + "_" + chan + "_count"] = len(results)
+                    if self.registryValue("lists." + entry + ".verbose." + chan):
                         self.debug("verbose")
                         for card in results:
                             custom = self.get_card_custom_fields(card[1])
@@ -293,7 +291,7 @@ class TrelloMon(callbacks.Plugin):
                                        card[1] + " " + rcamsg, chan, irc)
                     else:
                         self.debug("not verbose")
-                        self._send(message + " " + str(len(results)) + ' cards in ' + entry + ' -- ' + self.registryValue('lists.'+entry+'.url'), chan, irc)
+                        self._send(message + " " + str(len(results)) + ' cards in ' + entry + ' -- ' + self.registryValue('lists.' + entry + '.url'), chan, irc)
 
     def execute_wrapper(self, irc, msgs, args):
         '''admin test script for the monitor command'''
