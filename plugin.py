@@ -29,7 +29,8 @@
 ###
 
 import supybot.utils as utils
-from supybot.commands import *
+# from supybot.commands import *
+from supybot.commands import wrap
 import supybot.plugins as plugins
 import supybot.world as world
 import supybot.ircutils as ircutils
@@ -69,7 +70,8 @@ class TrelloMon(callbacks.Plugin):
         for name in self.registryValue('lists'):
             self.register_list(name)
         try:
-            schedule.addPeriodicEvent(self.check_trello, 30,
+            schedule.addPeriodicEvent(self.check_trello,
+                                      self.registryValue('queryinterval'),
                                       name=self.name(), now=False)
         except:
             pass
@@ -114,7 +116,8 @@ class TrelloMon(callbacks.Plugin):
             self.die()
         except:
             pass
-        schedule.addPeriodicEvent(self.check_trello, 20,
+        schedule.addPeriodicEvent(self.check_trello,
+                                  self.RegistryValue('queryinterval'),
                                   name=self.name(), now=True)
     startagent = wrap(startagent, ['admin'])
 
@@ -134,7 +137,8 @@ class TrelloMon(callbacks.Plugin):
                                  registry.String(trelloid, """the trello id for the list being monitored"""))
 
         conf.registerChannelValue(install, "interval",
-                                  registry.PositiveInteger(10, """The cadence for polling the board"""))
+                                  registry.PositiveInteger(10, """The cadence
+                                  for reporting this list on channel"""))
 
         conf.registerChannelValue(install, "verbose", registry.Boolean(True,
                                   """Should this list report a summary or all cards"""))
@@ -146,10 +150,10 @@ class TrelloMon(callbacks.Plugin):
                                  registry.String("https://trello.com", """link quick hash to the board containing
                                  this list"""))
         if trelloid == "":
-            trelloid = self.registryValue("lists."+name+".list_id")
+            trelloid = self.registryValue("lists." + name + ".list_id")
         if self.trello is not None:
             url = "https://trello.com/b/" + self.trello.lists.get_board(trelloid)['shortLink']
-            self.setRegistryValue("lists."+name+".url", url)
+            self.setRegistryValue("lists." + name + ".url", url)
 
     def get_custom_field_details(self, listid):
         '''get the custom field details'''

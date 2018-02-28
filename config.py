@@ -68,4 +68,10 @@ registry.SpaceSeparatedListOfStrings([], """Lists that are being
 conf.registerGlobalValue(TrelloMon, 'debug', registry.Boolean(False,
 """print debug logs to console"""))
 
+conf.registerGlobalValue(TrelloMon, 'queryinterval',
+                         registry.PositiveInteger(600, """Cadence for querying
+                         the board for updates in seconds.  Individual lists
+                         will report on channel with the <list>.interval
+                         configuration."""))
+
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:
