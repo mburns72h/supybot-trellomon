@@ -266,7 +266,7 @@ class TrelloMon(callbacks.Plugin):
                     results = self.get_trello_cards(self.registryValue('lists.' + entry + '.list_id'))
                     message = self.registryValue("lists." + entry + ".AlertMessage." + chan)
                     if results == []:
-                        if self.last_run[entry + "_" + chan + "_count"] != 0:
+                        if entry + "_" + chan + "_count" in self.last_run and self.last_run[entry + "_" + chan + "_count"] != 0:
                             self._send(message + " ALL CLEAR!!!", chan, irc)
                         self.last_run[entry + "_" + chan + "_count"] = 0
                         self.debug("no results")
