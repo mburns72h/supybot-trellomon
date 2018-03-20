@@ -116,7 +116,7 @@ class TrelloMon(callbacks.Plugin):
         except:
             pass
         schedule.addPeriodicEvent(self.check_trello,
-                                  self.RegistryValue('queryinterval'),
+                                  self.registryValue('queryinterval'),
                                   name=self.name(), now=True)
     startagent = wrap(startagent, ['admin'])
 
