@@ -160,26 +160,29 @@ class TrelloMon(callbacks.Plugin):
         self.debug("listid is " + str(listid))
         baseurl = "https://api.trello.com/1/boards/"
         # hard coded to get organizational plugin data
-        querystring = {'lists': 'open', 'actions': 'all', 'members': 'none', 'card_pluginData': 'false', 'membersInvited': 'none', 'fields': 'name, desc, descData, closed, idOrganization, pinned, url, shortUrl, prefs, labelNames', 'organization_pluginData': 'true', 'memberships': 'none', 'pluginData': 'true', 'boardStars': 'none', 'cards': 'none', 'checklists': 'none', 'membersInvited_fields': 'all'}
+        #querystring = {'lists': 'open', 'actions': 'all', 'members': 'none', 'card_pluginData': 'false', 'membersInvited': 'none', 'fields': 'name, desc, descData, closed, idOrganization, pinned, url, shortUrl, prefs, labelNames', 'organization_pluginData': 'true', 'memberships': 'none', 'pluginData': 'true', 'boardStars': 'none', 'cards': 'none', 'checklists': 'none', 'membersInvited_fields': 'all'}
         auth_opts = {'key': self.registryValue('trelloApi'),
                      'token': self.registryValue('trelloToken')}
-        options = querystring
-        options.update(auth_opts)
-        self.debug("Auth Options passed:  " + str(options))
+        #options = querystring
+        #options.update(auth_opts)
+        self.debug("Auth Options passed:  " + str(auth_opts))
         boardid = self.trello.lists.get(listid, fields='idBoard')['idBoard']
         self.debug("found this board id:  " + str(boardid))
-        r = requests.get(baseurl + boardid, params=options)
+        r = requests.get(baseurl + boardid + '/customFields', params=auth_opts)
         self.debug("status code returned:  " + str(r.status_code))
         # FIXME -- add logic to determine the right plugin entry
-        plugin_data = literal_eval(r.json()['pluginData'][0]['value'])['fields']
-        for field in plugin_data:
-            if field['n'] == 'DFG':
-                self.DFG = field['o']
+        for field in r.json():
+            if field['name'] == 'DFG':
+                self.DFG = {}
+                for dfg in field['options']:
+                    self.DFG[dfg['id']] = dfg['value']['text']
                 self.debug("DFG mapping:  " + str(self.DFG))
                 self.DFG_id = field['id']
                 self.debug("DFG field id:  " + self.DFG_id)
-            elif field['n'] == 'RCA':
-                self.RCA = field['o']
+            elif field['name'] == 'RCA':
+                self.RCA = {}
+                for rca in field['options']:
+                    self.RCA[rca['id']] = rca['value']['text']
                 self.debug("RCA mapping:  " + str(self.RCA))
                 self.RCA_id = field['id']
                 self.debug("RCA field id:  " + self.RCA_id)
@@ -187,24 +190,25 @@ class TrelloMon(callbacks.Plugin):
     def get_card_custom_fields(self, card):
         baseurl = 'https://api.trello.com/1/cards/'
         auth_opts = {'key': self.registryValue('trelloApi'),
-                     'token': self.registryValue('trelloToken')}
-        r = requests.get(baseurl + card + '/pluginData', params=auth_opts)
+                     'token': self.registryValue('trelloToken'),
+                     'customFieldItems': 'true'}
+        r = requests.get(baseurl + card, params=auth_opts)
         # FIXME -- add logic for multiple plugins
         card_DFG = None
         card_RCA = None
-        info = literal_eval(r.json()[0]['value'])['fields']
-        for dfg in self.DFG:
-            if self.DFG_id not in info:
-                break
-            elif dfg['id'] == info[self.DFG_id]:
-                card_DFG = dfg['value']
-                break
-        for rca in self.RCA:
-            if self.RCA_id not in info:
-                break
-            elif rca['id'] == info[self.RCA_id]:
-                card_RCA = rca['value']
-                break
+        self.debug(str(r.json()))
+        if r.json() is []:
+            self.debug("no plugindata found for card:" + card)
+            return [card_DFG, card_RCA]
+        #info = literal_eval(r.json()[0]['value'])['fields']
+        info = r.json()['customFieldItems']
+        for cf in info:
+            if cf['idCustomField'] == self.DFG_id:
+                card_DFG = self.DFG[cf['idValue']]
+                continue
+            if cf['idCustomField'] == self.RCA_id:
+                card_RCA = self.RCA[cf['idValue']]
+                continue
         self.debug("Card DFG:  " + str(card_DFG))
         self.debug("Card RCA:  " + str(card_RCA))
         return [card_DFG, card_RCA]
