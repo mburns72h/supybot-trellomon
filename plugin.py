@@ -269,10 +269,10 @@ class TrelloMon(callbacks.Plugin):
                         self.last_run[entry + "_" + chan] = time.mktime(time.gmtime())
                     # compare last run time to current time to interval
                     # if less than interval, next
-                    #elif (float(time.mktime(time.gmtime()) - self.last_run[entry + "_" + chan]) <
-                    #      float(self.registryValue("lists." + entry + ".interval." + chan) * 60)):
-                    #    self.debug("last run too recent")
-                    #    continue
+                    elif (float(time.mktime(time.gmtime()) - self.last_run[entry + "_" + chan]) <
+                          float(self.registryValue("lists." + entry + ".interval." + chan) * 60)):
+                        self.debug("last run too recent")
+                        continue
                     # if greater than interval, update
                     self.debug("last run too old or no last run")
                     self.last_run[entry + "_" + chan] = time.mktime(time.gmtime())
@@ -300,7 +300,7 @@ class TrelloMon(callbacks.Plugin):
                             else:
                                 rcamsg = "RCA: " + custom[1]
                             self.debug("active_dfgs:  " + str(active_dfgs))
-                            self.debug("custom[0]:  " + custom[0])
+                            self.debug("custom[0]:  " + str(custom[0]))
                             if active_dfgs is None or active_dfgs == [''] or custom[0] in active_dfgs:
                                 self._send(message + " " + dfgmsg + " " + card[0] +
                                            " -- https://trello.com/c/" +
