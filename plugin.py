@@ -148,6 +148,9 @@ class TrelloMon(callbacks.Plugin):
         conf.registerGlobalValue(install, "url",
                                  registry.String("https://trello.com", """link quick hash to the board containing
                                  this list"""))
+
+        conf.registerChannelValue(install, "dfg", registry.String("", """comma
+                                 separated list of dfgs to report on"""))
         if trelloid == "":
             trelloid = self.registryValue("lists." + name + ".list_id")
         if self.trello is not None:
@@ -241,13 +244,19 @@ class TrelloMon(callbacks.Plugin):
     def check_trello(self):
         '''based on plugin config, scan trello for cards in the specified lists'''
         # for each irc network in the bot
+        self.debug("here1")
         for irc in world.ircs:
             # for each channel the bot is in
             for chan in irc.state.channels:
                 self.debug(chan)
+                self.debug("here2:  " + chan)
                 # for each list in the definition
                 for entry in self.registryValue('lists'):
                     self.debug(entry)
+                    try:
+                        active_dfgs = self.registryValue('lists.' + entry + '.dfg.' + chan).split(',')
+                    except:
+                        active_dfgs = None
                     # if not active in that channel (default is false), then
                     # do nothing
                     self.get_custom_field_details(self.registryValue('lists.' + entry + '.list_id'))
@@ -260,10 +269,10 @@ class TrelloMon(callbacks.Plugin):
                         self.last_run[entry + "_" + chan] = time.mktime(time.gmtime())
                     # compare last run time to current time to interval
                     # if less than interval, next
-                    elif (float(time.mktime(time.gmtime()) - self.last_run[entry + "_" + chan]) <
-                          float(self.registryValue("lists." + entry + ".interval." + chan) * 60)):
-                        self.debug("last run too recent")
-                        continue
+                    #elif (float(time.mktime(time.gmtime()) - self.last_run[entry + "_" + chan]) <
+                    #      float(self.registryValue("lists." + entry + ".interval." + chan) * 60)):
+                    #    self.debug("last run too recent")
+                    #    continue
                     # if greater than interval, update
                     self.debug("last run too old or no last run")
                     self.last_run[entry + "_" + chan] = time.mktime(time.gmtime())
@@ -290,9 +299,12 @@ class TrelloMon(callbacks.Plugin):
                                 rcamsg = "RCA:Unset"
                             else:
                                 rcamsg = "RCA: " + custom[1]
-                            self._send(message + " " + dfgmsg + " " + card[0] +
-                                       " -- https://trello.com/c/" +
-                                       card[1] + " " + rcamsg, chan, irc)
+                            self.debug("active_dfgs:  " + str(active_dfgs))
+                            self.debug("custom[0]:  " + custom[0])
+                            if active_dfgs is None or active_dfgs == [''] or custom[0] in active_dfgs:
+                                self._send(message + " " + dfgmsg + " " + card[0] +
+                                           " -- https://trello.com/c/" +
+                                           card[1] + " " + rcamsg, chan, irc)
                     else:
                         self.debug("not verbose")
                         self._send(message + " " + str(len(results)) + ' cards in ' + entry + ' -- ' + self.registryValue('lists.' + entry + '.url'), chan, irc)
