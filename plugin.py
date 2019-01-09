@@ -162,12 +162,8 @@ class TrelloMon(callbacks.Plugin):
         # get url from the list
         self.debug("listid is " + str(listid))
         baseurl = "https://api.trello.com/1/boards/"
-        # hard coded to get organizational plugin data
-        #querystring = {'lists': 'open', 'actions': 'all', 'members': 'none', 'card_pluginData': 'false', 'membersInvited': 'none', 'fields': 'name, desc, descData, closed, idOrganization, pinned, url, shortUrl, prefs, labelNames', 'organization_pluginData': 'true', 'memberships': 'none', 'pluginData': 'true', 'boardStars': 'none', 'cards': 'none', 'checklists': 'none', 'membersInvited_fields': 'all'}
         auth_opts = {'key': self.registryValue('trelloApi'),
                      'token': self.registryValue('trelloToken')}
-        #options = querystring
-        #options.update(auth_opts)
         self.debug("Auth Options passed:  " + str(auth_opts))
         boardid = self.trello.lists.get(listid, fields='idBoard')['idBoard']
         self.debug("found this board id:  " + str(boardid))
@@ -203,7 +199,6 @@ class TrelloMon(callbacks.Plugin):
         if r.json() is []:
             self.debug("no plugindata found for card:" + card)
             return [card_DFG, card_RCA]
-        #info = literal_eval(r.json()[0]['value'])['fields']
         info = r.json()['customFieldItems']
         for cf in info:
             if cf['idCustomField'] == self.DFG_id:
@@ -228,18 +223,12 @@ class TrelloMon(callbacks.Plugin):
                              'somethingwithoutspaces',
                              'somethingwithoutspaces'])
 
-    def get_trello_cards(self, list=None, label=None):
+    def get_trello_cards(self, list=None):
         result = []
         if list is None or list == "":
             return result
         for card in self.trello.lists.get_card(list):
-            if label is None:
-                result.append([card['name'], card['shortLink'], card['labels']])
-            else:
-                for card_label in card['labels']:
-                    if label == card_label['name']:
-                        result.append([card['name'], card['shortLink'],
-                                       card['labels']])
+            result.append([card['name'], card['shortLink'], card['labels']])
         return result
 
     def check_trello(self):
@@ -247,20 +236,23 @@ class TrelloMon(callbacks.Plugin):
         # for each irc network in the bot
         self.debug("here1")
         for irc in world.ircs:
-            # for each channel the bot is in
-            for chan in irc.state.channels:
-                self.debug(chan)
-                self.debug("here2:  " + chan)
-                # for each list in the definition
-                for entry in self.registryValue('lists'):
-                    self.debug(entry)
+            # for each list in the definition
+            for entry in self.registryValue('lists'):
+                self.debug(entry)
+                # collect custom field info
+                self.get_custom_field_details(self.registryValue('lists.' + entry + '.list_id'))
+                # Collect all the list info first
+                results = self.get_trello_cards(self.registryValue('lists.' + entry + '.list_id'))
+                # for each channel the bot is in
+                for chan in irc.state.channels:
+                    self.debug(chan)
+                    self.debug("here2:  " + chan)
                     try:
                         active_dfgs = self.registryValue('lists.' + entry + '.dfg.' + chan).split(',')
                     except:
                         active_dfgs = None
                     # if not active in that channel (default is false), then
                     # do nothing
-                    self.get_custom_field_details(self.registryValue('lists.' + entry + '.list_id'))
                     if not self.registryValue("lists." + entry + ".active." + chan):
                         self.debug("not active in chan: " + chan)
                         continue
@@ -277,7 +269,6 @@ class TrelloMon(callbacks.Plugin):
                     # if greater than interval, update
                     self.debug("last run too old or no last run")
                     self.last_run[entry + "_" + chan] = time.mktime(time.gmtime())
-                    results = self.get_trello_cards(self.registryValue('lists.' + entry + '.list_id'))
                     message = self.registryValue("lists." + entry + ".AlertMessage." + chan)
                     if results == []:
                         if entry + "_" + chan + "_count" in self.last_run and self.last_run[entry + "_" + chan + "_count"] != 0:
