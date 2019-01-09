@@ -234,11 +234,12 @@ class TrelloMon(callbacks.Plugin):
             return result
         for card in self.trello.lists.get_card(list):
             if label is None:
-                result.append([card['name'], card['shortLink']])
+                result.append([card['name'], card['shortLink'], card['labels']])
             else:
                 for card_label in card['labels']:
                     if label == card_label['name']:
-                        result.append([card['name'], card['shortLink']])
+                        result.append([card['name'], card['shortLink'],
+                                       card['labels']])
         return result
 
     def check_trello(self):
@@ -299,12 +300,23 @@ class TrelloMon(callbacks.Plugin):
                                 rcamsg = "RCA:Unset"
                             else:
                                 rcamsg = "RCA: " + custom[1]
+                            if self.registryValue('showlabels', chan):
+                                if len(card[2]) == 0:
+                                    labelmsg = "Labels:  None"
+                                else:
+                                    labellist = []
+                                    for label in card[2]:
+                                        labellist.append(label['name'])
+                                    labelmsg = " Labels: " + ",".join(labellist)
+                            else:
+                                labelmsg = ""
+
                             self.debug("active_dfgs:  " + str(active_dfgs))
                             self.debug("custom[0]:  " + str(custom[0]))
                             if active_dfgs is None or active_dfgs == [''] or custom[0] in active_dfgs:
-                                self._send(message + " " + dfgmsg + " " + card[0] +
-                                           " -- https://trello.com/c/" +
-                                           card[1] + " " + rcamsg, chan, irc)
+                                self._send(message + " " + dfgmsg + " " + card[0]
+                                           + " -- https://trello.com/c/"
+                                           + card[1] + " " + rcamsg + labelmsg, chan, irc)
                     else:
                         self.debug("not verbose")
                         self._send(message + " " + str(len(results)) + ' cards in ' + entry + ' -- ' + self.registryValue('lists.' + entry + '.url'), chan, irc)

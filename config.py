@@ -74,4 +74,8 @@ conf.registerGlobalValue(TrelloMon, 'queryinterval',
                          will report on channel with the <list>.interval
                          configuration."""))
 
+conf.registerChannelValue(TrelloMon, 'showlabels', registry.Boolean(False,
+                          """Show labels/versions in the output"""))
+
+
 # vim:set shiftwidth=4 tabstop=4 expandtab textwidth=79:
