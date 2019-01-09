@@ -302,12 +302,12 @@ class TrelloMon(callbacks.Plugin):
                                 rcamsg = "RCA: " + custom[1]
                             if self.registryValue('showlabels', chan):
                                 if len(card[2]) == 0:
-                                    labelmsg = "Labels:  None"
+                                    labelmsg = "  Labels:  None"
                                 else:
                                     labellist = []
                                     for label in card[2]:
                                         labellist.append(label['name'])
-                                    labelmsg = " Labels: " + ",".join(labellist)
+                                    labelmsg = "  Labels: " + ",".join(labellist)
                             else:
                                 labelmsg = ""
 
