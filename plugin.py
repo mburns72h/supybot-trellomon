@@ -299,8 +299,10 @@ class TrelloMon(callbacks.Plugin):
                                 valid_labels.append(glabel)
                     except:
                         valid_labels = []
-                    active_dfgs.remove('')
-                    valid_labels.remove('')
+                    if '' in active_dfgs:
+                        active_dfgs.remove('')
+                    if '' in valid_labels:
+                        valid_labels.remove('')
                     self.debug('active_dfgs:  ' + str(active_dfgs))
                     self.debug('valid labels:  ' + str(valid_labels))
 
