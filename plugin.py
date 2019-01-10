@@ -301,10 +301,12 @@ class TrelloMon(callbacks.Plugin):
 
                     for card in results:
                         if active_dfgs != [''] and card['DFG'] not in active_dfgs:
-                            self.debug("skipping card['name'] due to active_dfg")
+                            self.debug("skipping %s due to active_dfg" %
+                                       card['name'])
                             continue
                         if valid_labels != [''] and not self.check_labels(card['labels'], valid_labels):
-                            self.debug("skipping card['name'] due to valid_labels")
+                            self.debug("skipping %s due to valid_labels" %
+                                       card['name'])
                             continue
                         chan_set.append(card)
 
