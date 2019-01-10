@@ -153,7 +153,7 @@ class TrelloMon(callbacks.Plugin):
                                  separated list of dfgs to report on"""))
 
         conf.registerChannelValue(install, "labels", registry.String("",
-                                  """comma separated list of labels to show""")
+                                  """comma separated list of labels to show"""))
         if trelloid == "":
             trelloid = self.registryValue("lists." + name + ".list_id")
         if self.trello is not None:
