@@ -297,8 +297,8 @@ class TrelloMon(callbacks.Plugin):
                         valid_labels = self.registryValue('lists.' + entry + '.labels.' + chan).split(',')
                     except:
                         valid_labels = []
-                    self.debug('active_dfgs:  ' + active_dfgs)
-                    self.debug('valid labels:  ' + valid_labels)
+                    self.debug('active_dfgs:  ' + str(active_dfgs))
+                    self.debug('valid labels:  ' + str(valid_labels))
 
                     for card in results:
                         if active_dfgs != [] and card['DFG'] not in active_dfgs:
