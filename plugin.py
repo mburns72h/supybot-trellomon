@@ -214,6 +214,10 @@ class TrelloMon(callbacks.Plugin):
                 continue
         self.debug("Card DFG:  " + str(card_DFG))
         self.debug("Card RCA:  " + str(card_RCA))
+        if card_DFG is None:
+            card_DFG = 'Unset'
+        if card_RCA is None:
+            card_RCA = 'Unset'
         return [card_DFG, card_RCA]
 
     def addlist(self, irc, msg, args, name, trelloid):
@@ -234,7 +238,7 @@ class TrelloMon(callbacks.Plugin):
             return result
         cards = self.trello.lists.get_card(list, fields="name,shortLink")
         for card in cards:
-            custom = get_card_custom_fields(self, card)
+            custom = self.get_card_custom_fields(self, card)
             card['DFG'] = custom[0]
             card['RCA'] = custom[1]
         return cards
@@ -263,7 +267,6 @@ class TrelloMon(callbacks.Plugin):
                 for chan in irc.state.channels:
                     self.debug(chan)
                     self.debug("here2:  " + chan)
-
 
                     # if not active in that channel (default is false), then
                     # do nothing
@@ -294,15 +297,17 @@ class TrelloMon(callbacks.Plugin):
                         valid_labels = self.registryValue('lists.' + entry + '.labels.' + chan).split(',')
                     except:
                         valid_labels = []
+                    self.debug('active_dfgs:  ' + active_dfgs)
+                    self.debug('valid labels:  ' + valid_labels)
 
                     for card in results:
                         if active_dfgs != [] and card['DFG'] not in active_dfgs:
+                            self.debug("skipping card['name'] due to active_dfg")
                             continue
                         if valid_labels != [] and not check_labels(card['labels'], valid_labels):
+                            self.debug("skipping card['name'] due to valid_labels")
                             continue
                         chan_set.append(card)
-
-
 
                     message = self.registryValue("lists." + entry + ".AlertMessage." + chan)
                     if chan_set == []:
@@ -312,33 +317,23 @@ class TrelloMon(callbacks.Plugin):
                         self.debug("no results")
                         continue
                     # check verbose setting per channel -- defaults to false
-                    # TODO add label logic
                     self.last_run[entry + "_" + chan + "_count"] = len(chan_set)
                     if self.registryValue("lists." + entry + ".verbose." + chan):
                         self.debug("verbose")
                         for card in chan_set:
-                            custom = self.get_card_custom_fields(card[1])
-                            if custom[0] is None:
-                                dfgmsg = "<DFG:Unset>"
-                            else:
-                                dfgmsg = "<DFG:" + custom[0] + ">"
-                            if custom[1] is None:
-                                rcamsg = "RCA:Unset"
-                            else:
-                                rcamsg = "RCA: " + custom[1]
+                            dfgmsg = "<DFG:" + card['DFG'] + ">"
+                            rcamsg = "RCA: " + card['RCA']
                             if self.registryValue('showlabels', chan):
-                                if len(card[2]) == 0:
+                                if len(card['labels']) == 0:
                                     labelmsg = "  Labels:  None"
                                 else:
                                     labellist = []
-                                    for label in card[2]:
+                                    for label in card['labels']:
                                         labellist.append(label['name'])
                                     labelmsg = "  Labels: " + ",".join(labellist)
                             else:
                                 labelmsg = ""
 
-                            self.debug("active_dfgs:  " + str(active_dfgs))
-                            self.debug("custom[0]:  " + str(custom[0]))
                             if active_dfgs is None or active_dfgs == [''] or custom[0] in active_dfgs:
                                 self._send(message + " " + dfgmsg + " " + card[0]
                                            + " -- https://trello.com/c/"
