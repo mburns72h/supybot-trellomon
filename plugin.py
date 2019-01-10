@@ -247,7 +247,7 @@ class TrelloMon(callbacks.Plugin):
         names = [label['name'] for label in card_labels]
         for i in valid_labels:
             for label in names:
-                if i in label:
+                if i.upper in label.upper:
                     return True
         return False
 
