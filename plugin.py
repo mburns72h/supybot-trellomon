@@ -188,6 +188,8 @@ class TrelloMon(callbacks.Plugin):
                 self.debug("RCA mapping:  " + str(self.RCA))
                 self.RCA_id = field['id']
                 self.debug("RCA field id:  " + self.RCA_id)
+            elif field['name'] == 'Owner':
+                self.owner_id = field['id']
 
     def get_card_custom_fields(self, card):
         baseurl = 'https://api.trello.com/1/cards/'
@@ -230,7 +232,20 @@ class TrelloMon(callbacks.Plugin):
         result = []
         if list is None or list == "":
             return result
-        return self.trello.lists.get_card(list):
+        cards = self.trello.lists.get_card(list, fields="name,shortLink")
+        for card in cards:
+            custom = get_card_custom_fields(self, card)
+            card['DFG'] = custom[0]
+            card['RCA'] = custom[1]
+        return cards
+
+    def check_labels(card_labels, valid_labels):
+        names = [label['name'] for label in card_labels]
+        for i in valid_labels:
+            for label in names:
+                if i in label:
+                    return True
+        return False
 
     def check_trello(self):
         '''based on plugin config, scan trello for cards in the specified lists'''
@@ -281,7 +296,11 @@ class TrelloMon(callbacks.Plugin):
                         valid_labels = []
 
                     for card in results:
-                        cardinfo = {}
+                        if active_dfgs != [] and card['DFG'] not in active_dfgs:
+                            continue
+                        if valid_labels != [] and not check_labels(card['labels'], valid_labels):
+                            continue
+                        chan_set.append(card)
 
 
 
