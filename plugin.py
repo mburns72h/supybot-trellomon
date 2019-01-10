@@ -238,7 +238,7 @@ class TrelloMon(callbacks.Plugin):
             return result
         cards = self.trello.lists.get_card(list, fields="name,shortLink")
         for card in cards:
-            custom = self.get_card_custom_fields(self, card['shortlink'])
+            custom = self.get_card_custom_fields(self, card['shortLink'])
             card['DFG'] = custom[0]
             card['RCA'] = custom[1]
         return cards
