@@ -151,6 +151,9 @@ class TrelloMon(callbacks.Plugin):
 
         conf.registerChannelValue(install, "dfg", registry.String("", """comma
                                  separated list of dfgs to report on"""))
+
+        conf.registerChannelValue(install, "labels", registry.String("",
+                                  """comma separated list of labels to show""")
         if trelloid == "":
             trelloid = self.registryValue("lists." + name + ".list_id")
         if self.trello is not None:
@@ -227,9 +230,7 @@ class TrelloMon(callbacks.Plugin):
         result = []
         if list is None or list == "":
             return result
-        for card in self.trello.lists.get_card(list):
-            result.append([card['name'], card['shortLink'], card['labels']])
-        return result
+        return self.trello.lists.get_card(list):
 
     def check_trello(self):
         '''based on plugin config, scan trello for cards in the specified lists'''
@@ -247,10 +248,8 @@ class TrelloMon(callbacks.Plugin):
                 for chan in irc.state.channels:
                     self.debug(chan)
                     self.debug("here2:  " + chan)
-                    try:
-                        active_dfgs = self.registryValue('lists.' + entry + '.dfg.' + chan).split(',')
-                    except:
-                        active_dfgs = None
+
+
                     # if not active in that channel (default is false), then
                     # do nothing
                     if not self.registryValue("lists." + entry + ".active." + chan):
@@ -269,8 +268,25 @@ class TrelloMon(callbacks.Plugin):
                     # if greater than interval, update
                     self.debug("last run too old or no last run")
                     self.last_run[entry + "_" + chan] = time.mktime(time.gmtime())
+
+                    # Filter out some cards from the list only for this channel
+                    chan_set = []
+                    try:
+                        active_dfgs = self.registryValue('lists.' + entry + '.dfg.' + chan).split(',')
+                    except:
+                        active_dfgs = []
+                    try:
+                        valid_labels = self.registryValue('lists.' + entry + '.labels.' + chan).split(',')
+                    except:
+                        valid_labels = []
+
+                    for card in results:
+                        cardinfo = {}
+
+
+
                     message = self.registryValue("lists." + entry + ".AlertMessage." + chan)
-                    if results == []:
+                    if chan_set == []:
                         if entry + "_" + chan + "_count" in self.last_run and self.last_run[entry + "_" + chan + "_count"] != 0:
                             self._send(message + " ALL CLEAR!!!", chan, irc)
                         self.last_run[entry + "_" + chan + "_count"] = 0
@@ -278,10 +294,10 @@ class TrelloMon(callbacks.Plugin):
                         continue
                     # check verbose setting per channel -- defaults to false
                     # TODO add label logic
-                    self.last_run[entry + "_" + chan + "_count"] = len(results)
+                    self.last_run[entry + "_" + chan + "_count"] = len(chan_set)
                     if self.registryValue("lists." + entry + ".verbose." + chan):
                         self.debug("verbose")
-                        for card in results:
+                        for card in chan_set:
                             custom = self.get_card_custom_fields(card[1])
                             if custom[0] is None:
                                 dfgmsg = "<DFG:Unset>"
@@ -310,7 +326,7 @@ class TrelloMon(callbacks.Plugin):
                                            + card[1] + " " + rcamsg + labelmsg, chan, irc)
                     else:
                         self.debug("not verbose")
-                        self._send(message + " " + str(len(results)) + ' cards in ' + entry + ' -- ' + self.registryValue('lists.' + entry + '.url'), chan, irc)
+                        self._send(message + " " + str(len(chan_set)) + ' cards in ' + entry + ' -- ' + self.registryValue('lists.' + entry + '.url'), chan, irc)
 
     def execute_wrapper(self, irc, msgs, args):
         '''admin test script for the monitor command'''
