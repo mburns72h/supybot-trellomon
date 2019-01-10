@@ -334,10 +334,9 @@ class TrelloMon(callbacks.Plugin):
                             else:
                                 labelmsg = ""
 
-                            if active_dfgs is None or active_dfgs == [''] or custom[0] in active_dfgs:
-                                self._send(message + " " + dfgmsg + " " +
-                                           card['name'] + " -- " + card['shortLink'] +
-                                           " " + rcamsg + labelmsg, chan, irc)
+                            self._send(message + " " + dfgmsg + " " +
+                                       card['name'] + " -- " + card['shortLink'] +
+                                       " " + rcamsg + labelmsg, chan, irc)
                     else:
                         self.debug("not verbose")
                         self._send(message + " " + str(len(chan_set)) + ' cards in ' + entry + ' -- ' + self.registryValue('lists.' + entry + '.url'), chan, irc)
