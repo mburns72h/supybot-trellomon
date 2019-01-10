@@ -236,7 +236,7 @@ class TrelloMon(callbacks.Plugin):
         result = []
         if list is None or list == "":
             return result
-        cards = self.trello.lists.get_card(list, fields="name,shortLink")
+        cards = self.trello.lists.get_card(list, fields="name,shortLink,labels")
         for card in cards:
             custom = self.get_card_custom_fields(card['shortLink'])
             card['DFG'] = custom[0]
