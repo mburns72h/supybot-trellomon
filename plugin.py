@@ -318,7 +318,7 @@ class TrelloMon(callbacks.Plugin):
                         continue
                     # check verbose setting per channel -- defaults to false
                     self.last_run[entry + "_" + chan + "_count"] = len(chan_set)
-                    self.debug("verbose is " + str(self.registryValue("lists." + entry + '.verbose.' + char)))
+                    self.debug("verbose is " + str(self.registryValue("lists." + entry + '.verbose.' + chan)))
                     if self.registryValue("lists." + entry + ".verbose." + chan):
                         self.debug("verbose")
                         for card in chan_set:
