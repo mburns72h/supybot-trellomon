@@ -294,6 +294,9 @@ class TrelloMon(callbacks.Plugin):
                         active_dfgs = ['']
                     try:
                         valid_labels = self.registryValue('lists.' + entry + '.labels.' + chan).split(',')
+                        for glabel in self.registryValue('labels', chan).split(','):
+                            if glabel not in valid_labels:
+                                valid_labels.append(glabel)
                     except:
                         valid_labels = ['']
                     self.debug('active_dfgs:  ' + str(active_dfgs))
