@@ -243,7 +243,7 @@ class TrelloMon(callbacks.Plugin):
             card['RCA'] = custom[1]
         return cards
 
-    def check_labels(card_labels, valid_labels):
+    def check_labels(self, card_labels, valid_labels):
         names = [label['name'] for label in card_labels]
         for i in valid_labels:
             for label in names:
@@ -258,15 +258,14 @@ class TrelloMon(callbacks.Plugin):
         for irc in world.ircs:
             # for each list in the definition
             for entry in self.registryValue('lists'):
-                self.debug(entry)
+                self.debug("list:  " + str(entry))
                 # collect custom field info
                 self.get_custom_field_details(self.registryValue('lists.' + entry + '.list_id'))
                 # Collect all the list info first
                 results = self.get_trello_cards(self.registryValue('lists.' + entry + '.list_id'))
                 # for each channel the bot is in
                 for chan in irc.state.channels:
-                    self.debug(chan)
-                    self.debug("here2:  " + chan)
+                    self.debug("channel  " + str(chan))
 
                     # if not active in that channel (default is false), then
                     # do nothing
@@ -304,7 +303,7 @@ class TrelloMon(callbacks.Plugin):
                         if active_dfgs != [''] and card['DFG'] not in active_dfgs:
                             self.debug("skipping card['name'] due to active_dfg")
                             continue
-                        if valid_labels != [''] and not check_labels(card['labels'], valid_labels):
+                        if valid_labels != [''] and not self.check_labels(card['labels'], valid_labels):
                             self.debug("skipping card['name'] due to valid_labels")
                             continue
                         chan_set.append(card)
