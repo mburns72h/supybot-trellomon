@@ -77,7 +77,7 @@ conf.registerGlobalValue(TrelloMon, 'queryinterval',
 conf.registerChannelValue(TrelloMon, 'showlabels', registry.Boolean(False,
                           """Show labels/versions in the output"""))
 
-conf.registerChannelValue(TrelloMon, 'labels', registry.Boolean(False,
+conf.registerChannelValue(TrelloMon, 'labels', registry.String("",
                           """Global show labels setting for a channel.  This
                           will be merged with the per-list setting"""))
 
