@@ -292,19 +292,19 @@ class TrelloMon(callbacks.Plugin):
                     try:
                         active_dfgs = self.registryValue('lists.' + entry + '.dfg.' + chan).split(',')
                     except:
-                        active_dfgs = []
+                        active_dfgs = ['']
                     try:
                         valid_labels = self.registryValue('lists.' + entry + '.labels.' + chan).split(',')
                     except:
-                        valid_labels = []
+                        valid_labels = ['']
                     self.debug('active_dfgs:  ' + str(active_dfgs))
                     self.debug('valid labels:  ' + str(valid_labels))
 
                     for card in results:
-                        if active_dfgs != [] and card['DFG'] not in active_dfgs:
+                        if active_dfgs != [''] and card['DFG'] not in active_dfgs:
                             self.debug("skipping card['name'] due to active_dfg")
                             continue
-                        if valid_labels != [] and not check_labels(card['labels'], valid_labels):
+                        if valid_labels != [''] and not check_labels(card['labels'], valid_labels):
                             self.debug("skipping card['name'] due to valid_labels")
                             continue
                         chan_set.append(card)
@@ -318,6 +318,7 @@ class TrelloMon(callbacks.Plugin):
                         continue
                     # check verbose setting per channel -- defaults to false
                     self.last_run[entry + "_" + chan + "_count"] = len(chan_set)
+                    self.debug("verbose is " + str(self.registryValue("lists." + entry + '.verbose.' + char)))
                     if self.registryValue("lists." + entry + ".verbose." + chan):
                         self.debug("verbose")
                         for card in chan_set:
