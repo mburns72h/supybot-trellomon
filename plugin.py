@@ -236,7 +236,7 @@ class TrelloMon(callbacks.Plugin):
         result = []
         if list is None or list == "":
             return result
-        cards = self.trello.lists.get_card(list, fields="name,shortLink,labels")
+        cards = self.trello.lists.get_card(list, fields="name,shortLink,shortUrl,labels")
         for card in cards:
             custom = self.get_card_custom_fields(card['shortLink'])
             card['DFG'] = custom[0]
@@ -344,7 +344,7 @@ class TrelloMon(callbacks.Plugin):
                                 labelmsg = ""
 
                             self._send(message + " " + dfgmsg + " " +
-                                       card['name'] + " -- " + card['shortLink'] +
+                                       card['name'] + " -- " + card['shortUrl'] +
                                        " " + rcamsg + labelmsg, chan, irc)
                     else:
                         self.debug("not verbose")
