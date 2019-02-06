@@ -64,8 +64,10 @@ class TrelloMon(callbacks.Plugin):
         self.last_run = {}
         self.DFG_id = None
         self.RCA_id = None
+        self.RE_id = None
         self.DFG = []
         self.RCA = []
+        self.RE = []
         for name in self.registryValue('lists'):
             self.register_list(name)
         try:
@@ -152,6 +154,9 @@ class TrelloMon(callbacks.Plugin):
         conf.registerChannelValue(install, "dfg", registry.String("", """comma
                                  separated list of dfgs to report on"""))
 
+        conf.registerGlobalValue(install, "RCA", registry.String("RCA",
+                                  """Valid values:  RCA, RE -- type of RCA/RE metadata to show"""))
+
         conf.registerChannelValue(install, "labels", registry.String("",
                                   """comma separated list of labels to show"""))
         if trelloid == "":
@@ -188,6 +193,13 @@ class TrelloMon(callbacks.Plugin):
                 self.debug("RCA mapping:  " + str(self.RCA))
                 self.RCA_id = field['id']
                 self.debug("RCA field id:  " + self.RCA_id)
+            elif field['name'] == 'RE':
+                self.RE = {}
+                for re in field['options']:
+                    self.RE[re['id']] = re['value']['text']
+                self.debug("RE Mapping:  "  + str(self.RE))
+                self.RE_id = field['id']
+                self.debug("RE field id:  " + self.RE_id)
             elif field['name'] == 'Owner':
                 self.owner_id = field['id']
 
@@ -212,6 +224,8 @@ class TrelloMon(callbacks.Plugin):
             if cf['idCustomField'] == self.RCA_id:
                 card_RCA = self.RCA[cf['idValue']]
                 continue
+            if cf['idCustomField'] == self.RE_id:
+                card_RCA = self.RE[cf['idValue']]
         self.debug("Card DFG:  " + str(card_DFG))
         self.debug("Card RCA:  " + str(card_RCA))
         if card_DFG is None:
@@ -331,7 +345,10 @@ class TrelloMon(callbacks.Plugin):
                         self.debug("verbose")
                         for card in chan_set:
                             dfgmsg = "<DFG:" + card['DFG'] + ">"
-                            rcamsg = "RCA: " + card['RCA']
+                            if self.registryValue('lists.' + entry + '.RCA') == "RCA":
+                                rcamsg = "RCA: " + card['RCA']
+                            elif self.registryValue('lists.' + entry + '.RCA') == "RE":
+                                rcamsg = "RE: " + card['RCA']
                             if self.registryValue('showlabels', chan):
                                 if len(card['labels']) == 0:
                                     labelmsg = "  Labels:  None"
