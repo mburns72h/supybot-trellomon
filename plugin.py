@@ -325,7 +325,7 @@ class TrelloMon(callbacks.Plugin):
 
                     for card in results:
                         # filter by custom fields
-                        if self.check_custom_filter(card, self.registryValue('lists.' + entry + '.custom_field_filter'), custom_fields):
+                        if self.check_custom_filter(card, self.registryValue('lists.' + entry + '.custom_field_filter.' + chan), custom_fields):
                             self.debug("skipping %s due to custom field filter" % card['name'])
                             continue
                         if valid_labels != [] and not self.check_labels(card['labels'], valid_labels):
@@ -348,8 +348,8 @@ class TrelloMon(callbacks.Plugin):
                         self.debug("verbose")
                         for card in chan_set:
                             # Build the message in the format:  <Alert> <precustom> <details> <postcustom> <labels>
-                            precustom = self._deref_custom(self.registryValue('lists.' + entry + '.precustom'), custom_fields, card)
-                            postcustom = self._deref_custom(self.registryValue('lists.' + entry + '.postcustom'), custom_fields, card)
+                            precustom = self._deref_custom(self.registryValue('lists.' + entry + '.precustom.' + chan), custom_fields, card)
+                            postcustom = self._deref_custom(self.registryValue('lists.' + entry + '.postcustom.' + chan), custom_fields, card)
                             if self.registryValue('showlabels', chan):
                                 if len(card['labels']) == 0:
                                     labelmsg = "  Labels:  None"
