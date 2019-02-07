@@ -264,7 +264,7 @@ class TrelloMon(callbacks.Plugin):
         if custom_filter is None or custom_filter == "":
             self.debug("custom filter not set")
             return False
-        for criteria in value.split(','):
+        for criteria in custom_filter.split(','):
             (field_name, value) = criteria.split(':',1)
             self.debug('custom field filter on field "%s" with value "%s"' % (field, value))
             for cf in custom_field_info:
