@@ -320,7 +320,7 @@ class TrelloMon(callbacks.Plugin):
 
                     for card in results:
                         # filter by custom fields
-                        if self.check_custom_filter(card, self.RegistryValue('lists.' + entry + '.custom_field_filter', custom_fields):
+                        if self.check_custom_filter(card, self.RegistryValue('lists.' + entry + '.custom_field_filter'), custom_fields):
                             self.debug("skipping %s due to custom field filter" % card['name'])
                             continue
                         if valid_labels != [] and not self.check_labels(card['labels'], valid_labels):
