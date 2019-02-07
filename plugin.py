@@ -43,6 +43,7 @@ from ast import literal_eval
 from trello import TrelloApi
 import sys
 import time
+import re
 try:
     from supybot.i18n import PluginInternationalization
     _ = PluginInternationalization('TrelloMon')
@@ -62,12 +63,15 @@ class TrelloMon(callbacks.Plugin):
         self.trello = None
         self.reload_trello()
         self.last_run = {}
+        self.custom_fields []
         self.DFG_id = None
         self.RCA_id = None
         self.RE_id = None
+        self.EP_id = None
         self.DFG = []
         self.RCA = []
         self.RE = []
+        self.EP = []
         for name in self.registryValue('lists'):
             self.register_list(name)
         try:
@@ -154,8 +158,15 @@ class TrelloMon(callbacks.Plugin):
         conf.registerChannelValue(install, "dfg", registry.String("", """comma
                                  separated list of dfgs to report on"""))
 
-        conf.registerGlobalValue(install, "RCA", registry.String("RCA",
-                                  """Valid values:  RCA, RE -- type of RCA/RE metadata to show"""))
+        conf.registerChannelValue(install, "precustom", registry.String("DFG: %DFG%",
+                                  """Custom Field info to display prior to the
+                                  card details and after the Alert Message"""))
+
+        conf.registerChannelValue(install, "postcustom", registry.String("RCA: %RCA%",
+                                  """Custom Field info to display after the
+                                  card details and prior to labels (if
+                                  enabled).  To show a field, please enter it
+                                  as ${field_name}"""))
 
         conf.registerChannelValue(install, "labels", registry.String("",
                                   """comma separated list of labels to show"""))
@@ -177,31 +188,7 @@ class TrelloMon(callbacks.Plugin):
         self.debug("found this board id:  " + str(boardid))
         r = requests.get(baseurl + boardid + '/customFields', params=auth_opts)
         self.debug("status code returned:  " + str(r.status_code))
-        # FIXME -- add logic to determine the right plugin entry
-        for field in r.json():
-            if field['name'] == 'DFG':
-                self.DFG = {}
-                for dfg in field['options']:
-                    self.DFG[dfg['id']] = dfg['value']['text']
-                self.debug("DFG mapping:  " + str(self.DFG))
-                self.DFG_id = field['id']
-                self.debug("DFG field id:  " + self.DFG_id)
-            elif field['name'] == 'RCA':
-                self.RCA = {}
-                for rca in field['options']:
-                    self.RCA[rca['id']] = rca['value']['text']
-                self.debug("RCA mapping:  " + str(self.RCA))
-                self.RCA_id = field['id']
-                self.debug("RCA field id:  " + self.RCA_id)
-            elif field['name'] == 'RE':
-                self.RE = {}
-                for re in field['options']:
-                    self.RE[re['id']] = re['value']['text']
-                self.debug("RE Mapping:  "  + str(self.RE))
-                self.RE_id = field['id']
-                self.debug("RE field id:  " + self.RE_id)
-            elif field['name'] == 'Owner':
-                self.owner_id = field['id']
+        return r.json()
 
     def get_card_custom_fields(self, card):
         baseurl = 'https://api.trello.com/1/cards/'
@@ -209,30 +196,7 @@ class TrelloMon(callbacks.Plugin):
                      'token': self.registryValue('trelloToken'),
                      'customFieldItems': 'true'}
         r = requests.get(baseurl + card, params=auth_opts)
-        # FIXME -- add logic for multiple plugins
-        card_DFG = None
-        card_RCA = None
-        self.debug(str(r.json()))
-        if r.json() is []:
-            self.debug("no plugindata found for card:" + card)
-            return [card_DFG, card_RCA]
-        info = r.json()['customFieldItems']
-        for cf in info:
-            if cf['idCustomField'] == self.DFG_id:
-                card_DFG = self.DFG[cf['idValue']]
-                continue
-            if cf['idCustomField'] == self.RCA_id:
-                card_RCA = self.RCA[cf['idValue']]
-                continue
-            if cf['idCustomField'] == self.RE_id:
-                card_RCA = self.RE[cf['idValue']]
-        self.debug("Card DFG:  " + str(card_DFG))
-        self.debug("Card RCA:  " + str(card_RCA))
-        if card_DFG is None:
-            card_DFG = 'Unset'
-        if card_RCA is None:
-            card_RCA = 'Unset'
-        return [card_DFG, card_RCA]
+        return r.json()['customFieldItems']
 
     def addlist(self, irc, msg, args, name, trelloid):
         '''<name> <trello_id>
@@ -252,9 +216,7 @@ class TrelloMon(callbacks.Plugin):
             return result
         cards = self.trello.lists.get_card(list, fields="name,shortLink,shortUrl,labels")
         for card in cards:
-            custom = self.get_card_custom_fields(card['shortLink'])
-            card['DFG'] = custom[0]
-            card['RCA'] = custom[1]
+            card['customFieldItems'] = self.get_card_custom_fields(card['shortLink'])
         return cards
 
     def check_labels(self, card_labels, valid_labels):
@@ -265,6 +227,41 @@ class TrelloMon(callbacks.Plugin):
                     return True
         return False
 
+    def _deref_custom(self, basestr, custom_info, card):
+        ''' pass in the base string, custom field info and a card
+        and handle replacing all the variables in basestr with the appropriate
+        variables from the card'''
+
+        p = re.compile(r'\${\w}')
+        for match in p.finditer(basestr):
+            #get the right substring without the ${} wrapper
+            variable=match.group()[2,-1]
+            custom_field = None
+            # get the custom field id
+            for field in custom_info:
+                if field['name'] == variable:
+                    custom_field = field
+                    break
+            if custom_field is None:
+                basestr = basestr.replace(match.group(), "N/A")
+            else:
+                value = "None"
+                for entry in card['customFieldItems']:
+                    if entry['idCustomField'] == custom_field['id']:
+                        if field['type'] == 'list':
+                            for option in custom_field['options']:
+                                if option['id'] == entry['idValue']:
+                                    value = str(option['value']['text'])
+                                    break
+                        elif field['type'] == 'text':
+                            value = str(entry['value']['text'])
+                        elif field['type'] == 'checkbox':
+                            value = str(field['value']['checked'])
+                        break
+                basestr = basestr.replace(match.group(), value)
+        return basestr
+
+
     def check_trello(self):
         '''based on plugin config, scan trello for cards in the specified lists'''
         # for each irc network in the bot
@@ -274,7 +271,7 @@ class TrelloMon(callbacks.Plugin):
             for entry in self.registryValue('lists'):
                 self.debug("list:  " + str(entry))
                 # collect custom field info
-                self.get_custom_field_details(self.registryValue('lists.' + entry + '.list_id'))
+                custom_fields = self.get_custom_field_details(self.registryValue('lists.' + entry + '.list_id'))
                 # Collect all the list info first
                 results = self.get_trello_cards(self.registryValue('lists.' + entry + '.list_id'))
                 # for each channel the bot is in
@@ -344,6 +341,12 @@ class TrelloMon(callbacks.Plugin):
                     if self.registryValue("lists." + entry + ".verbose." + chan):
                         self.debug("verbose")
                         for card in chan_set:
+                            # Build the message in the format:  <Alert> <precustom> <details> <postcustom> <labels>
+                            precustom =
+                            self._deref_custom(self.RegistryValue('lists.' +
+                            entry + '.precustom'),
+                            for word in self.registryValue('lists.' + entry +
+                                '.precustom').split(' ')
                             dfgmsg = "<DFG:" + card['DFG'] + ">"
                             if self.registryValue('lists.' + entry + '.RCA') == "RCA":
                                 rcamsg = "RCA: " + card['RCA']
