@@ -153,7 +153,7 @@ class TrelloMon(callbacks.Plugin):
                                   """Custom Field info to display prior to the
                                   card details and after the Alert Message"""))
 
-        conf.registerChannelValue(install, "postcustom", registry.String("RCA: %RCA%",
+        conf.registerChannelValue(install, "postcustom", registry.String("RCA: ${RCA} ",
                                   """Custom Field info to display after the
                                   card details and prior to labels (if
                                   enabled).  To show a field, please enter it
