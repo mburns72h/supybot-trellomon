@@ -266,7 +266,7 @@ class TrelloMon(callbacks.Plugin):
             return False
         for criteria in custom_filter.split(','):
             (field_name, value) = criteria.split(':',1)
-            self.debug('custom field filter on field "%s" with value "%s"' % (field, value))
+            self.debug('custom field filter on field "%s" with value "%s"' % (field_name, value))
             for cf in custom_field_info:
                 if cf['name'] == field_name:
                     break
