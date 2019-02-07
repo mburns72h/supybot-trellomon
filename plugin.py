@@ -223,7 +223,7 @@ class TrelloMon(callbacks.Plugin):
         for cf in custom_field_info:
             if field['idCustomField'] == cf['id']:
                 if cf['type'] == 'list':
-                   for option in custom_field['options']:
+                   for option in cf['options']:
                         if option['id'] == field['idValue']:
                             return str(option['value']['text'])
                 elif cf['type'] == 'text':
