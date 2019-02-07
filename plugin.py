@@ -257,7 +257,7 @@ class TrelloMon(callbacks.Plugin):
 
     def check_custom_filter(self, card, custom_filter, custom_field_info):
         '''return true if this card should be filtered out'''
-        if custom_filter is None or value == "":
+        if custom_filter is None or custom_filter == "":
             return False
         for criteria in value.split(','):
             (field_name, value) = criteria.split(':',1)
