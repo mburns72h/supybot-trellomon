@@ -240,7 +240,7 @@ class TrelloMon(callbacks.Plugin):
         self.debug("base message:  " + basestr)
         for match in p.finditer(basestr):
             #get the right substring without the ${} wrapper
-            variable=match.group()[2,-1]
+            variable=match.group()[2:-1]
             self.debug("match:  " + str(variable))
             custom_field = None
             # get the custom field id
