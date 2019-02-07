@@ -206,6 +206,7 @@ class TrelloMon(callbacks.Plugin):
         if list is None or list == "":
             return result
         cards = self.trello.lists.get_card(list, fields="name,shortLink,shortUrl,labels")
+        self.debug("found %d cards" % len(cards))
         for card in cards:
             card['customFieldItems'] = self.get_card_custom_fields(card['shortLink'])
         return cards
@@ -320,7 +321,7 @@ class TrelloMon(callbacks.Plugin):
                     for card in results:
                         self.debug("check card:  %s"  % str(card))
                         # filter by custom fields
-                        if self.check_custom_filter(card, self.RegistryValue('lists.' + entry + '.custom_field_filter'), custom_fields):
+                        if self.check_custom_filter(card, self.registryValue('lists.' + entry + '.custom_field_filter'), custom_fields):
                             self.debug("skipping %s due to custom field filter" % card['name'])
                             continue
                         if valid_labels != [] and not self.check_labels(card['labels'], valid_labels):
