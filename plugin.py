@@ -236,7 +236,7 @@ class TrelloMon(callbacks.Plugin):
         ''' pass in the base string, custom field info and a card
         and handle replacing all the variables in basestr with the appropriate
         variables from the card'''
-        p = re.compile(r'\${\w}')
+        p = re.compile(r'\${\w+}')
         self.debug("base message:  " + basestr)
         for match in p.finditer(basestr):
             #get the right substring without the ${} wrapper
@@ -262,6 +262,7 @@ class TrelloMon(callbacks.Plugin):
     def check_custom_filter(self, card, custom_filter, custom_field_info):
         '''return true if this card should be filtered out'''
         if custom_filter is None or custom_filter == "":
+            self.debug("custom filter not set")
             return False
         for criteria in value.split(','):
             (field_name, value) = criteria.split(':',1)
@@ -323,7 +324,6 @@ class TrelloMon(callbacks.Plugin):
                     self.debug('valid labels:  ' + str(valid_labels))
 
                     for card in results:
-                        self.debug("check card:  %s"  % str(card))
                         # filter by custom fields
                         if self.check_custom_filter(card, self.registryValue('lists.' + entry + '.custom_field_filter'), custom_fields):
                             self.debug("skipping %s due to custom field filter" % card['name'])
