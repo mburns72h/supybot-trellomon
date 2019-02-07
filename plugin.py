@@ -219,7 +219,7 @@ class TrelloMon(callbacks.Plugin):
                     return True
         return False
 
-    def get_custom_field_value(field, custom_field_info):
+    def get_custom_field_value(self, field, custom_field_info):
         for cf in custom_field_info:
             if field['idCustomField'] == cf['id']:
                 if cf['type'] == 'list':
@@ -255,7 +255,7 @@ class TrelloMon(callbacks.Plugin):
             else:
                 for entry in card['customFieldItems']:
                     if entry['idCustomField'] == custom_field['id']:
-                        value = get_custom_field_value(entry, custom_info)
+                        value = self.get_custom_field_value(entry, custom_info)
                 basestr = basestr.replace(match.group(), str(value))
         return basestr
 
