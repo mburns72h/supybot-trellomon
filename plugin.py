@@ -253,6 +253,7 @@ class TrelloMon(callbacks.Plugin):
             if custom_field is None:
                 basestr = basestr.replace(match.group(), "N/A")
             else:
+                value = None
                 for entry in card['customFieldItems']:
                     if entry['idCustomField'] == custom_field['id']:
                         value = self.get_custom_field_value(entry, custom_info)
