@@ -273,7 +273,7 @@ class TrelloMon(callbacks.Plugin):
     def check_trello(self):
         '''based on plugin config, scan trello for cards in the specified lists'''
         # for each irc network in the bot
-        self.debug("here1")
+        self.debug("starting check_trello")
         for irc in world.ircs:
             # for each list in the definition
             for entry in self.registryValue('lists'):
@@ -285,7 +285,6 @@ class TrelloMon(callbacks.Plugin):
                 # for each channel the bot is in
                 for chan in irc.state.channels:
                     self.debug("channel  " + str(chan))
-
                     # if not active in that channel (default is false), then
                     # do nothing
                     if not self.registryValue("lists." + entry + ".active." + chan):
@@ -319,6 +318,7 @@ class TrelloMon(callbacks.Plugin):
                     self.debug('valid labels:  ' + str(valid_labels))
 
                     for card in results:
+                        self.debug("check card:  %s"  % str(card))
                         # filter by custom fields
                         if self.check_custom_filter(card, self.RegistryValue('lists.' + entry + '.custom_field_filter'), custom_fields):
                             self.debug("skipping %s due to custom field filter" % card['name'])
