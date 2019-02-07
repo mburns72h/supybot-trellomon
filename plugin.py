@@ -344,8 +344,8 @@ class TrelloMon(callbacks.Plugin):
                         self.debug("verbose")
                         for card in chan_set:
                             # Build the message in the format:  <Alert> <precustom> <details> <postcustom> <labels>
-                            precustom = self._deref_custom(self.RegistryValue('lists.' + entry + '.precustom'), custom_fields, card)
-                            postcustom = self._deref_custom(self.RegistryValue('lists.' + entry + '.postcustom'), custom_fields, card)
+                            precustom = self._deref_custom(self.registryValue('lists.' + entry + '.precustom'), custom_fields, card)
+                            postcustom = self._deref_custom(self.registryValue('lists.' + entry + '.postcustom'), custom_fields, card)
                             if self.registryValue('showlabels', chan):
                                 if len(card['labels']) == 0:
                                     labelmsg = "  Labels:  None"
