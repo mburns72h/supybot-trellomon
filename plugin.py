@@ -272,7 +272,7 @@ class TrelloMon(callbacks.Plugin):
                     break
             for field in card['customFieldItems']:
                 if field['idCustomField'] == cf['id']:
-                    if value == get_custom_field_value(field, custom_field_info):
+                    if value == self.get_custom_field_value(field, custom_field_info):
                         return False
         return True
 
