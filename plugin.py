@@ -237,14 +237,18 @@ class TrelloMon(callbacks.Plugin):
         and handle replacing all the variables in basestr with the appropriate
         variables from the card'''
         p = re.compile(r'\${\w}')
+        self.debug("base message:  " + basestr)
         for match in p.finditer(basestr):
             #get the right substring without the ${} wrapper
             variable=match.group()[2,-1]
+            self.debug("match:  " + str(variable)
             custom_field = None
             # get the custom field id
             for field in custom_info:
+                self.debug("checking custom field:  " + field['name'])
                 if field['name'] == variable:
                     custom_field = field
+                    self.debug("found custom_field: " + field['name'])
                     break
             if custom_field is None:
                 basestr = basestr.replace(match.group(), "N/A")
