@@ -241,7 +241,7 @@ class TrelloMon(callbacks.Plugin):
         for match in p.finditer(basestr):
             #get the right substring without the ${} wrapper
             variable=match.group()[2,-1]
-            self.debug("match:  " + str(variable)
+            self.debug("match:  " + str(variable))
             custom_field = None
             # get the custom field id
             for field in custom_info:
